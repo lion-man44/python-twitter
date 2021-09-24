@@ -1,0 +1,89 @@
+{% extends 'base_template.html' %}
+{% include 'header.html' %}
+
+{% block container %}
+{% set user_id = session['user_id'] %}
+{% set display_name = session['display_name'] or '' %}
+{% set user_name = session['user_name'] or '' %}
+{% set age = session['age'] or 0 %}
+{% set email = session['email'] %}
+{% set user_info_id = session['user_info_id'] %}
+{% set interests = session['interests'] or '' %}
+{% set profile_image = url_for('static', filename = session['profile_image'] or '150x150.png') %}
+{% if user_info_id is none: %}
+    {% set action = '/profile/new' %}
+{% else %}
+    {% set action = '%s/%s/%s' | format('/profile', user_id, 'edit') %}
+{% endif %}
+<div class="d-flex justify-content-center align-items-center flex-column">
+    <div class="card w-75 mt-3">
+        <div class="d-flex align-items-center flex-column">
+            <picture class="mt-3 mb-3">
+                <img id="js-profile-image" class="img-fluid img-sumbnail rounded-circle" src="{{ profile_image }}">
+            </picture>
+            <div class="input-group mb-3 w-50" style="display: none">
+                <label class="input-group-text" for="thumbnail-uploader">Upload</label>
+                <input type="file" class="form-control" name="profile_image" id="thumbnail-uploader" value="{{ profile_image }}" data-user-id="{{user_id}}">
+            </div>
+        </div>
+        <form action="{{action}}" method="POST" enctype="multipart/form-data">
+            {% if user_info_id is not none: %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <div class="d-flex align-items-center flex-column">
+                <div class="input-group mb-3 w-50">
+                    <input type="text" class="form-control" name="display_name" placeholder="DisplayName" value="{{ display_name }}" aria-label="DisplayName">
+                </div>
+                <div class="input-group mb-3 w-50">
+                    <input type="text" class="form-control" name="user_name" placeholder="RealName" value="{{ user_name }}" aria-label="RealName">
+                </div>
+                <div class="input-group mb-3 w-50">
+                    <input type="number" class="form-control" name="age" placeholder="Age" value="{{ age }}" aria-label="Age">
+                </div>
+                {% if session['user_info_id'] is not none: %}
+                    <div class="input-group mb-3 w-50">
+                        <input type="email" class="form-control" name="email" placeholder="Email" value="{{ email }}" aria-label="Email">
+                    </div>
+                {% endif %}
+                <div class="input-group mb-3 w-50">
+                    <input type="text" class="form-control" name="interests" placeholder="Interests" value="{{ interests }}" aria-label="Interests">
+                </div>
+                <input class="btn btn-primary w-25" type="submit" value="submit">
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    ;(() => {
+        const $profileImage = document.querySelector('#js-profile-image');
+        const getImage = (userId) => {
+            fetch(`/profile/${userId}/get_image`)
+            .then((res) => res.json())
+            .then((json) => {
+                const src = `/static/${json.data.profile_image[0]}`
+                $profileImage.src = src;
+            })
+        }
+        const uploadImage = (e) => {
+            const file = e.target.files[0]
+            const userId = e.target.dataset.userId
+            const formData = new FormData();
+
+            formData.append('profile_image', file);
+            fetch(`/profile/${userId}/upload_image`, {method: 'POST', body: formData})
+            .then((res) => {
+                getImage(userId);
+            })
+            .catch((err) => {
+                console.error(err)
+            });
+        }
+        $profileImage.addEventListener('click', () => {
+            document.querySelector('input[type="file"]').click()
+        })
+        document.querySelector('input[type="file"]').addEventListener('change', uploadImage)
+    })()
+</script>
+{% endblock %}

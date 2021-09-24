@@ -1,0 +1,145 @@
+{% extends 'base_template.html' %}
+{% block head %}<title>Tweet Page</title>{% endblock %}
+{% include 'header.html' %}
+{% block container %}
+<form class="mt-3" action="/tweets/new" method="POST">
+    <div class="d-flex justify-content-center">
+        <div class="form-floating w-50">
+            <textarea class="form-control" placeholder="What is happened?" name="message" id="floatingTextarea"></textarea>
+            <label for="floatingTextarea">Comments</label>
+        </div>
+        <input class="ms-3 btn btn-primary rounded-pill" type="submit" value="submit">    
+    </div>
+</form>
+
+<div class="d-flex justify-content-center">
+    <ul class="list-group w-75">
+        {% for t in session['tweets'] %}
+            {% set id = t['id'] %}
+            {% set tweet_user_id = t['user_id'] %}
+            {% set message = t['message'] %}
+            {% set is_visible = t['is_visible'] %}
+            {% set user_info_id = t['user_info_id'] %}
+            {% set display_name = t['display_name'] %}
+            {% set user_name = t['user_name'] %}
+            {% set age = t['age'] %}
+            {% set interests = t['interests'] %}
+            {% set image = url_for('static', filename = t['profile_image'] or '150x150.png') %}
+            {% set pushed_user_id = t['pushed_user_id'] %}
+            {% set following = t['following'] %}
+            {% set is_current_user = session['user_id'] == tweet_user_id %}
+            {% if is_visible: %}
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-start align-items-center">
+                        <img class="rounded-circle" src="{{image}}" width=40 height=40>
+                        <span class="ms-1 text-break fs-6" style="flex-grow: 3">{{ display_name or user_name }}</span>
+                        {% if not is_current_user %}
+                            {% if following %}
+                                <div class="text-primary fs-6">
+                                    <button class="btn btn-primary rounded-pill js-follow" type="button" data-follow-id="{{tweet_user_id}}">Add Follow</button>
+                                </div>
+                            {% else %}
+                                <div class="text-primary fs-6">
+                                    <button class="btn btn-outline-primary rounded-pill js-follow" type="button" data-follow-id="{{tweet_user_id}}">Add Follow</button>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <p class="text-break fs-5">{{ message }}</p>
+                    {% if is_current_user %}
+                        <i class="far {{ 'fa-eye-slash' if is_visible else 'fa-eye' }} js-invisual-tweet" data-message-id="{{id}}"></i>
+                        <i class="far fa-trash-alt ms-5 js-delete-tweet" data-message-id="{{id}}"></i>
+                    {% endif %}
+                    <i class="fa{{ 's' if session['user_id'] == pushed_user_id else 'r' }} fa-thumbs-up {{ 'ms-5' if is_current_user else '' }} js-message-likes" data-message-id="{{id}}"></i>
+                </li>
+            {% elif not is_visble and is_current_user %}
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-start align-items-end">
+                        <img class="rounded-circle" src="{{image}}" width=40 height=40>
+                        <spanp class="ms-1 text-break fs-6" style="flex-grow: 3">{{ display_name or user_name }}</span>
+                        {% if not is_current_user %}
+                            {% if following %}
+                                <div class="text-primary fs-6">
+                                    <button class="btn btn-primary rounded-pill js-follow" type="button" data-follow-id="{{tweet_user_id}}">Add Follow</button>
+                                </div>
+                            {% else %}
+                                <div class="text-primary fs-6">
+                                    <button class="btn btn-outline-primary rounded-pill js-follow" type="button" data-follow-id="{{tweet_user_id}}">Add Follow</button>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <p class="text-break fs-5">{{ message }}</p>
+                    {% if is_current_user %}
+                        <i class="far {{ 'fa-eye-slash' if is_visible else 'fa-eye' }} js-invisual-tweet" data-message-id="{{id}}"></i>
+                        <i class="far fa-trash-alt ms-5 js-delete-tweet" data-message-id="{{id}}"></i>
+                    {% endif %}
+                    <i class="fa{{ 's' if session['user_id'] == pushed_user_id else 'r' }} fa-thumbs-up {{ 'ms-5' if is_current_user else '' }} js-message-likes" data-message-id="{{id}}"></i>
+                </li>
+            {% endif %}
+        {% endfor %}
+    </ul>    
+</div>
+
+<script>
+    (() => {
+        const invisualTweet = (target, messageId) => {
+            fetch(`/tweets/${messageId}`, { method: 'POST' })
+            .then((res) => {
+                if (res.ok) {
+                    target.classList.toggle('fa-eye-slash')
+                    target.classList.toggle('fa-eye')
+                }
+            })
+        };
+        const deleteTweet = (event, messageId) => {
+            fetch(`/tweets/${messageId}`, { method: 'DELETE' })
+            .then((res) => {
+                if (res.ok) {
+                    event.target.parentNode.remove();
+                }
+            })
+        };
+        const toggleLikes = (target, messageId) => {
+            fetch(`/tweets/${messageId}/likes`, { method: 'POST'})
+            .then((res) => {
+                if (res.ok) {
+                    target.classList.toggle('far')
+                    target.classList.toggle('fas')
+                } 
+            })
+        };
+        const addFolower = (target, followId) => {
+            fetch(`/followers/${followId}`, { method: 'POST' })
+            .then((res) => {
+                if (res.ok) {
+                    document.querySelectorAll(`button[data-follow-id='${followId}']`).forEach((el) => {
+                        el.classList.toggle('btn-primary')
+                        el.classList.toggle('btn-outline-primary')
+                    })
+                }
+            });
+        };
+        document.querySelectorAll('.js-invisual-tweet').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                invisualTweet(e.target, e.target.dataset.messageId)
+            })
+        });
+        document.querySelectorAll('.js-delete-tweet').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                deleteTweet(e, e.target.dataset.messageId)
+            })
+        });
+        document.querySelectorAll('.js-message-likes').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                toggleLikes(e.target, e.target.dataset.messageId)
+            })
+        });
+        document.querySelectorAll('.js-follow').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                addFolower(e.target, e.target.dataset.followId)
+            })
+        });
+    })();
+</script>
+{% endblock %}

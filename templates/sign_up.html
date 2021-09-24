@@ -1,0 +1,28 @@
+{% extends 'base_template.html' %}
+{% include 'header.html' %}
+{% block container %}
+{% if request.path == '/login': %}
+    {% set title = 'Login' %}
+    {% set action = '/login' %}
+{% else: %}
+    {% set title = 'Sign up' %}
+    {% set action = '/sign_up' %}
+{% endif %}
+<div class="d-flex justify-content-center align-items-center flex-column">
+    {% include 'errors.html' %}
+    <div class="card mt-5 w-25">
+        <h2 class="text-center">{{ title }}</h2>
+        <form action="{{action}}" method="POST">
+            <div class="d-flex align-items-center flex-column">
+                <div class="input-group mb-3 mt-3 w-75">
+                    <input type="email" class="form-control" name="email" placeholder="Email" aria-label="Email">
+                </div>
+                <div class="input-group mb-3 w-75">
+                    <input type="text" class="form-control" name="password" placeholder="Password" aria-label="Password">
+                </div>
+                <input class="w-25 btn btn-primary" type="submit" value="Submit">
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
