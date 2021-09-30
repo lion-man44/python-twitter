@@ -54,8 +54,9 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        if email == None:
-            return redirect(url_for('home'))
+        if email is None:
+            print(email)
+            return redirect(url_for('login'))
 
         l = Login()
         user = l.login(email, password)
