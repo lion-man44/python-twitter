@@ -1,31 +1,23 @@
-from db import Database
-import hashlib
+from user_info import UserInfos
+from user import Users
 
 class Login:
     def __init__(self):
-        db = Database()
-        self.db = db.db
-        self.cursor = db.cursor
+        pass
 
     def signup(self, email, password):
-        self.cursor.execute('SELECT COUNT(*) FROM users WHERE email = "%s" AND password = "%s"' % (email, self.__to_sha256(password)))
-        (total,) = self.cursor.fetchone()
-        if total <= 0:
-            self.cursor.execute('INSERT INTO users (email, password) VALUES ("%s", "%s")' % (email, self.__to_sha256(password)))
-            self.db.commit()
-            self.cursor.execute('SELECT * FROM users WHERE email = "%s"' % email)
-            (id, email, _) = self.cursor.fetchone()
-            return (id, email)
+        exists_user = Users.search({ 'email': email, 'password': password})
+        if exists_user:
+            return exists_user
         else:
-            return (None, None)
-        
+            u = Users({ 'email': email, 'password': password })
+            created_user = u.create()
+            UserInfos.initial_to_create(created_user.id)
+            return created_user
+
     def login(self, email, password):
-        self.cursor.execute('SELECT * FROM users LEFT JOIN user_infos ON users.id = user_infos.user_id WHERE email = "%s" AND password = "%s"' % (email, self.__to_sha256(password)))
-        (id, email, _, _, _, display_name, user_name, interests, _, _) = self.cursor.fetchone()
-        if id:
-            return (id, email, display_name, user_name, interests)
+        exists_user = Users.search({ 'email': email, 'password': password})
+        if exists_user:
+            return exists_user
         else:
-            return False
-        
-    def __to_sha256(self, password):
-        return hashlib.sha256(f'{password}'.encode()).hexdigest()
+            return None

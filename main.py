@@ -1,18 +1,21 @@
-from operator import itemgetter
-import os
-from re import U
-from follower import Follower
-from tweet_like import TweetLike
-from flask.helpers import flash
-from werkzeug.utils import secure_filename
-from tweet import Tweet
-from user_info import UserInfo
+from db import Database
 from flask import Flask, render_template, redirect, url_for, request, jsonify
-from flask.globals import session
-from login import Login
-import json
 
 app = Flask(__name__)
+database = Database(app)
+
+import sqlalchemy
+import os
+import json
+from flask.globals import session
+from flask.helpers import flash
+from werkzeug.utils import secure_filename
+from tweet import Tweets
+from user_info import UserInfos
+from login import Login
+from follower import Followers
+from tweet_like import TweetLikes
+
 
 UPLOAD_FOLDER = './static/'
 ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif']
@@ -22,7 +25,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/')
 def home():
     __remove_session()
-    session = None
     return render_template('sign_up.html')
 
 @app.route('/sign_up', methods = ['POST'])
@@ -32,12 +34,17 @@ def sign_up():
     if (email is None or email == '') or (password is None or password == ''):
         flash('email or password are not filled')
         return redirect(url_for('home'))
+
     l = Login()
-    db_id, db_email = l.signup(email, password)
-    if db_id:
-        session['user_id'] = db_id
-        session['email'] = db_email
-        return redirect(url_for('tweets'))
+    try:
+        user = l.signup(email, password)
+    except sqlalchemy.exc.IntegrityError:
+        flash('Duplicate the email, please use another email')
+        return redirect(url_for('home'))
+
+    if user:
+        __add_session({ 'user_id': user.id, 'email': user.email })
+        return redirect(url_for('profile'))
     else:
         flash('The email is exists already')
         return redirect(url_for('login'))
@@ -47,20 +54,24 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        l = Login()
-        (id, db_email, display_name, user_name, _) = l.login(email, password)
         if email == None:
-            return redirect(url_for('sign_up'))
-        elif db_email:
-            session['user_id'] = id
-            session['email'] = db_email
-            if display_name is not None:
-                session['name'] = display_name
-            else:
-                session['name'] = user_name
+            return redirect(url_for('home'))
+
+        l = Login()
+        user = l.login(email, password)
+        if user:
+            __add_session({
+                'user_id': user.id,
+                'email': user.email,
+                'display_name': user.user_info.display_name,
+                'user_name': user.user_info.user_name,
+                'age': user.user_info.age,
+                'interests': user.user_info.interests,
+                'profile_image': user.user_info.profile_image
+            })
             return redirect(url_for('tweets'))
         else:
-            return redirect(url_for('sign_up'))
+            return redirect(url_for('home'))
     elif request.method == 'GET':
         return render_template('sign_up.html')
 
@@ -69,168 +80,139 @@ def logout():
     __remove_session()
     return redirect(url_for('login'))
 
-@app.route('/chosing_link')
-def chosing_link():
-    if session['name'] is not None:
-        name = session['name']
-    else:
-        name = session['email']
-    return render_template('chosing_link.html', name = name)
-
 @app.route('/profile')
 def profile():
     if session['user_id'] is None:
         return redirect(url_for('home'))
-    u = UserInfo()
-    id = session['user_id']
-    user = u.get_user_info(id)
-    __add_session(user)
+
+    user_info = UserInfos.search({ 'user_id': session['user_id'] })
+    __add_session({
+        'user_id': user_info.user_id,
+        'display_name': user_info.display_name,
+        'user_name': user_info.user_name,
+        'age': user_info.age,
+        'interests': user_info.interests,
+        'profile_image': user_info.profile_image
+    })
     return render_template('profile.html')
 
-@app.route('/profile/new', methods = ['POST'])
-def profile_new():
-    u = UserInfo()
-    id = session['user_id']
+# @app.route('/profile/new', methods = ['POST'])
+# def profile_new():
+#     u = UserInfo()
+#     id = session['user_id']
 
-    display_name = request.form['display_name'] or ''
-    user_name = request.form['user_name'] or ''
-    age = request.form['age'] or 0
-    interests = request.form['interests'] or ''
-    u.insert_user_info({ 'user_id': id, 'display_name': display_name, 'user_name': user_name, 'age': age, 'interests': interests})
-    __add_session(u.get_user_info(id))
-    return redirect(url_for('profile'))
+#     display_name = request.form['display_name'] or ''
+#     user_name = request.form['user_name'] or ''
+#     age = request.form['age'] or 0
+#     interests = request.form['interests'] or ''
+#     u.insert_user_info({ 'user_id': id, 'display_name': display_name, 'user_name': user_name, 'age': age, 'interests': interests})
+#     __add_session(u.get_user_info(id))
+#     return redirect(url_for('profile'))
 
 @app.route('/profile/<user_id>/edit', methods = ['POST'])
 def profile_edit(user_id):
-    u = UserInfo()
-    id = user_id
-
     display_name = request.form['display_name']
     user_name = request.form['user_name']
-    age = request.form['age'] or 0
+    age = request.form['age']
     email = request.form['email']
     interests = request.form['interests']
 
-    u.update_user_info({ 'id': id, 'display_name': display_name, 'email': email, 'user_name': user_name, 'age': age, 'interests': interests})
-    __add_session(u.get_user_info(id))
+    u = UserInfos.search({ 'user_id': user_id })
+    updated = u.update({ 'display_name': display_name, 'user_name': user_name, 'age': age, 'email': email, 'interests': interests})
+    __add_session({
+        'user_id': updated.user_id,
+        'display_name': updated.display_name,
+        'user_name': updated.user_name,
+        'age': updated.age,
+        'interests': updated.interests,
+        'profile_image': updated.profile_image,
+        'email': updated.user.email
+    })
     return redirect(url_for('profile'))
 
 @app.route('/profile/<user_id>/upload_image', methods = ['POST'])
 def upload_image(user_id):
-    u = UserInfo()
     filename = __profile_image(request.files['profile_image'])
-    u.update_profile_image(user_id, filename)
-    __add_session_only_profile_image(filename)
+    u = UserInfos.search({ 'user_id': user_id })
+    u.upload_image(filename)
+    __add_session({ 'profile_image': filename })
     return redirect(url_for('profile'))
 
 @app.route('/profile/<user_id>/get_image')
 def get_image(user_id):
-    u = UserInfo()
+    u = UserInfos.search({ 'user_id': user_id })
     result = {
         'data': {
-            'profile_image': u.get_profile_image(user_id)
+            'profile_image': u.get_image()
         }
     }
     return json.dumps(result)
 
 @app.route('/tweets')
 def tweets():
-    t = Tweet()
-    session['tweets'] = t.get_tweets({ 'user_id': session['user_id'] })
+    session['tweets'] = Tweets.default_tweets(session['user_id'])
     return render_template('tweet.html')
 
 @app.route('/tweets/new', methods = ['POST'])
 def tweets_new():
-    id = session['user_id']
-
-    message = request.form['message']
-    t = Tweet()
-    t.add_tweet({ 'user_id': id, 'message': message })
+    t = Tweets({ 'user_id': session['user_id'], 'message': request.form['message'] })
+    t.create()
     return redirect(url_for('tweets'))
 
 @app.route('/tweets/<message_id>', methods = ['POST'])
 def tweets_edit(message_id):
-    t = Tweet()
-    if t.invisible_tweet(message_id):
-        result = {
-            'code': 200,
-            'message': 'OK'
-        }
-    else:
-        result = {
-            'code': 503,
-            'message': 'It happened something'
-        }
-    return jsonify(values = json.dumps(result))
+    t = Tweets.search(message_id)
+    tweet = t.invisible()
+    return tweet.to_json()
 
 @app.route('/tweets/<message_id>', methods = ['DELETE'])
 def tweets_delete(message_id):
-    t = Tweet()
-    if t.delete_tweet(message_id):
-        result = {
-            'code': 200,
-            'message': 'OK'
-        }
-    else:
-        result = {
-            'code': 503,
-            'message': 'It happened something'
-        }
-    return jsonify(values = json.dumps(result))
+    t = Tweets.search(message_id)
+    tweet = t.delete()
+    return tweet.to_json()
 
 @app.route('/tweets/<message_id>/likes', methods = ['POST'])
 def tweet_likes(message_id):
-    tl = TweetLike()
-    if tl.favorite(message_id, session['user_id']):
-        result = {
-            'code': 200,
-            'message': 'OK'
-        }
+    data = { 'user_id': session['user_id'], 'tweet_id': message_id }
+    tl = TweetLikes.search(data)
+    if tl:
+        v = tl.delete()
     else:
-        result = {
-            'code': 503,
-            'message': 'It happened something'
-        }
-    return json.dumps(result)
+        new = TweetLikes(data)
+        v = new.create()
+    return v.to_json()
 
 @app.route('/followers/<follow_id>', methods = ['POST'])
 def follow(follow_id):
-    user_id = session['user_id']
-    f = Follower()
-    if f.follow(user_id, follow_id):
-        result = {
-            'code': 200,
-            'message': 'OK'
-        }
-    elif f.unfollow(user_id, follow_id):
-        result  = {
-            'code': 200,
-            'message': 'OK'
-        }
+    data = { 'user_id': session['user_id'], 'follow_id': follow_id }
+    f = Followers.search(data)
+    if f:
+        v = f.delete()
     else:
-        result = {
-            'code': 503,
-            'message': 'It happened something'
-        }
-    return json.dumps(result)
-       
-def __add_session_only_profile_image(filename):
-    session['profile_image'] = filename
+        new = Followers(data)
+        v = new.create()
+    return v.to_json()
 
 def __add_session(data):
-    id, email, user_info_id, display_name, user_name, age, interests, profile_image = data
-    session['user_id'] = id
-    session['email'] = email
-    session['user_info_id'] = user_info_id
-    session['display_name'] = display_name
-    session['user_name'] = user_name
-    session['interests'] = interests
-    session['profile_image'] = profile_image
-    session['age'] = age
+    if 'user_id' in data:
+        session['user_id'] = data['user_id']
+    if 'email' in data:
+        session['email'] = data['email']
+    if 'user_info_id' in data:
+        session['user_info_id'] = data['user_info_id']
+    if 'display_name' in data:
+        session['display_name'] = data['display_name']
+    if 'user_name' in data:
+        session['user_name'] = data['user_name']
+    if 'interests' in data:
+        session['interests'] = data['interests']
+    if 'profile_image' in data:
+        session['profile_image'] = data['profile_image']
+    if 'age' in data:
+        session['age'] = data['age']
 
 def __remove_session():
-    for key in session:
-        session[key] = None
+    session = None
 
 def __allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

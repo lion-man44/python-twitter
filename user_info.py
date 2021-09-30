@@ -1,67 +1,71 @@
-from operator import itemgetter
-from user import User
+from user import Users
 from db import Database
 
-class UserInfo:
-    def __init__(self):
-        db = Database()
-        self.db = db.db
-        self.cursor = db.cursor
+db = Database.database
 
-    def get_user_info(self, user_id):
-        self.cursor.execute('SELECT * FROM users LEFT JOIN user_infos ON users.id = user_infos.user_id WHERE users.id = %s' % user_id)
-        (id, email, _, user_info_id, _, display_name, user_name, interests, profile_image, age) = self.cursor.fetchone()
-        return (id, email, user_info_id, display_name, user_name, interests, profile_image, age)
+class UserInfos(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey(Users.id), unique = True)
+    display_name = db.Column(db.String(80))
+    user_name = db.Column(db.String(80))
+    age = db.Column(db.Integer, default = 0)
+    interests = db.Column(db.String(256))
+    profile_image = db.Column(db.String(256), nullable = False, default = '150x150.png')
 
-    def get_profile_image(self, user_id):
-        sql = 'SELECT profile_image FROM user_infos WHERE user_id = %s' % user_id
-        self.cursor.execute(sql)
-        profile_image = self.cursor.fetchone()
-        return profile_image
+    user = db.relationship('Users', uselist = False, foreign_keys = 'UserInfos.user_id')
 
-    def insert_user_info(self, data):
-        user_id, display_name, user_name, age, interests = itemgetter('user_id', 'display_name', 'user_name', 'age', 'interests')(data)
-        sql = 'INSERT INTO user_infos (user_id, display_name, user_name, interests, age) VALUES (%s, "%s", "%s", "%s", %s);' \
-            % (user_id, self.__xstr(display_name), self.__xstr(user_name), self.__xstr(interests), age)
-        self.cursor.execute(sql)
-        self.db.commit()
-        return True
+    def __repr__(self):
+        return '<UserInfos %s, %s, %s, %s, %s, %s, %s>' \
+            % (self.id, self.user_id, self.display_name, self.user_name, self.age, self.interests, self.profile_image)
 
-    def update_profile_image(self, user_id, filename):
-        sql = 'UPDATE user_infos SET profile_image = "%s" WHERE user_id = %s' % (filename, user_id)
-        self.cursor.execute(sql)
-        self.db.commit()
-        return True
+    def __init__(self, data):
+        self.user_id = data['user_id']
+        if 'display_name' in data:
+            self.display_name = data['display_name']
+        if 'user_name' in data:
+            self.user_name = data['user_name']
+        if 'age' in data:
+            self.age = data['age']
+        if 'interests' in data:
+            self.interests = data['interests']
+        if 'profile_image' in data:
+            self.profile_image = data['profile_image']
 
-    def update_user_info(self, data):
-        sqls = ['UPDATE user_infos SET ']
-        user_id, display_name, user_name, age, email, interests = itemgetter('id', 'display_name', 'user_name', 'age', 'email', 'interests')(data)
-        display_name = display_name or ''
-        user_name = user_name or ''
-        interests = interests or ''
-        # if display_name is not None:
-        sqls.append('display_name = "%s"' % self.__xstr(display_name))
-        # if user_name is not None:
-        sqls.append('user_name = "%s"' % self.__xstr(user_name))
-        sqls.append('age = %s' % age)
-        # if interests is not None:
-        sqls.append('interests = "%s"' % self.__xstr(interests))
+    @classmethod
+    def initial_to_create(self, user_id):
+        u = UserInfos({ 'user_id': user_id })
+        return u.create()
 
-        sql = ''
-        for x in range(len(sqls)):
-            if x == 0 or x == (len(sqls) - 1):
-                sql += sqls[x] + ' '
-            else:
-                sql += sqls[x] + ', '
+    @classmethod
+    def search(self, data):
+        return UserInfos.query.filter_by(user_id = data['user_id']).limit(1).first()
 
-        sql += 'WHERE user_id = %s' % user_id
-        self.cursor.execute(sql)
-        self.db.commit()
-        if email is not None and email != '':
-            u = User()
-            u.update_user(user_id, email)
-        
-        return True
+    def create(self):
+        db.session.add(self)
+        db.session.commit()
+        return self
+
+    def update(self, data):
+        if 'display_name' in data:
+            self.display_name = data['display_name']
+        if 'user_name' in data:
+            self.user_name = data['user_name']
+        if 'age' in data:
+            self.age = data['age']
+        if 'interests' in data:
+            self.interests = data['interests']
+
+        if 'email' in data:
+            self.user.update({ 'email': data['email'] })
+
+        db.session.commit()
+        return self
     
-    def __xstr(self, s):
-        return '' if s is None else str(s)
+    def upload_image(self, filename):
+        self.profile_image = filename
+
+        db.session.commit()
+        return self
+
+    def get_image(self):
+        return self.profile_image
