@@ -62,7 +62,7 @@
             fetch(`/profile/${userId}/get_image`)
             .then((res) => res.json())
             .then((json) => {
-                const src = `/static/${json.data.profile_image[0]}`
+                const src = `/static/${json.data.profile_image}`
                 $profileImage.src = src;
             })
         }
