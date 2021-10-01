@@ -23,7 +23,7 @@
             </picture>
             <div class="input-group mb-3 w-50" style="display: none">
                 <label class="input-group-text" for="thumbnail-uploader">Upload</label>
-                <input type="file" class="form-control" name="profile_image" id="thumbnail-uploader" value="{{ profile_image }}" data-user-id="{{user_id}}">
+                <input type="file" class="form-control simple-file-upload" name="profile_image" id="thumbnail-uploader" value="{{ profile_image }}" data-user-id="{{user_id}}">
             </div>
         </div>
         <form action="{{action}}" method="POST" enctype="multipart/form-data">
@@ -86,4 +86,5 @@
         document.querySelector('input[type="file"]').addEventListener('change', uploadImage)
     })()
 </script>
+<script src="https://app.simplefileupload.com/buckets/05759c00fd9e36ea011b3519b25ce38a.js"></script>
 {% endblock %}
