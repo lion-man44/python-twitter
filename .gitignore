@@ -1,5 +1,5 @@
 __pycache__
 volumes/
 .secrets/
-.static/*
+static/
 !.static/150x150.png
