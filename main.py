@@ -5,8 +5,7 @@ app = Flask(__name__)
 database = Database(app)
 
 import sqlalchemy
-import os
-import json
+import os, json, boto3
 from flask.globals import session
 from flask.helpers import flash
 from werkzeug.utils import secure_filename
@@ -131,6 +130,29 @@ def profile_edit(user_id):
     })
     return redirect(url_for('profile'))
 
+@app.route('sign_s3/')
+def sign3():
+    BUCKET = os.environ.get('S3_BUCKET')
+    filename = request.args.get('file_name')
+    filetype = request.args.get('file_type')
+    
+    s3 = boto3.client('s3')
+    presigned_post = s3.generate_presigned_post(
+        Bucket = BUCKET,
+        Key = filename,
+        Fields = { 'acl': 'public-read', 'Content-Type': filetype },
+        Conditions = [
+            { 'acl': 'pubilc-read' },
+            { 'Content-Type': filetype }
+        ],
+        ExpiresIn = 3600
+    )
+    
+    return json.dumps({
+        'data': presigned_post,
+        'url': 'https://%s.s3.amazonaws.com/%s' % (BUCKET, filename)
+    })
+
 @app.route('/profile/<user_id>/upload_image', methods = ['POST'])
 def upload_image(user_id):
     filename = __profile_image(request.files['profile_image'])
@@ -208,7 +230,7 @@ def __add_session(data):
     if 'interests' in data:
         session['interests'] = data['interests']
     if 'profile_image' in data:
-        session['profile_image'] = os.environ['S3_BUCKET'] + '/' + data['profile_image']
+        session['profile_image'] = 'https://%s.s3.amazonaws.com/%s' % (os.environ.get('S3_BUCKET'), data['profile_image'])
     if 'age' in data:
         session['age'] = data['age']
 

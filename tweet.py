@@ -55,7 +55,7 @@ class Tweets(db.Model):
             dic['user_name'] = user_info.user_name
             dic['age'] = user_info.age
             dic['interests'] = user_info.interests
-            dic['profile_image'] = os.environ['S3_BUCKET'] + '/' + user_info.profile_image
+            dic['profile_image'] = 'https://%s.s3.amazonaws.com/%s' % (os.environ.get('S3_BUCKET'), user_info.profile_image)
             dic['pushed_user_id'] = t.tweet_likes[0].user_id if t.tweet_likes else 0
             result.append(dic)
 
