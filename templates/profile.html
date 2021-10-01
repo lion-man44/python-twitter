@@ -66,6 +66,41 @@
                 $profileImage.src = src;
             })
         }
+        const getSignedReqeust = (file) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/sign_s3?file_name=' + file.name + '&file_type=' + file.type)
+            xhr.onreadystatechange = function() {
+                if (xhr.status === 4) {
+                    if (xhr.status === 200) {
+                        const res = JSON.parse(xhr.responseText);
+                        uploadImage(file, res.data, res.url)
+                    } else {
+                        alert('Could not get signed URL')
+                    }
+                }
+            }
+            xhr.send()
+        }
+        const uploadFile = (file, s3Data, url) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', s3Data.url)
+
+            const formData = new FormData();
+            for(key in s3Data.fields) {
+                formData.append(key, s3Data.fields[key])
+            }
+            formData.append('file', file)
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 204) {
+                        $profileImage.src = url
+                    }
+                } else {
+                    alert('Could not upload file')
+                }
+            }
+        }
         const uploadImage = (e) => {
             const file = e.target.files[0]
             const userId = e.target.dataset.userId
@@ -81,9 +116,11 @@
             });
         }
         $profileImage.addEventListener('click', () => {
-            document.querySelector('input[type="file"]').click()
-        })
-        document.querySelector('input[type="file"]').addEventListener('change', uploadImage)
-    })()
+            document.querySelector('input[type="file"]').click();
+        });
+        document.querySelector('input[type="file"]').addEventListener('change', (e) => {
+            getSignedReqeust(e.target.files[0]);
+        });
+    })();
 </script>
 {% endblock %}
