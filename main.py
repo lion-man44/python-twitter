@@ -1,3 +1,4 @@
+from werkzeug.wrappers import response
 from db import Database
 from flask import Flask, render_template, redirect, url_for, request, jsonify
 
@@ -135,7 +136,8 @@ def sign3():
     BUCKET = os.environ.get('S3_BUCKET')
     filename = request.args.get('file_name')
     filetype = request.args.get('file_type')
-    
+
+    print('respooooooooooooooooooooonse', response)
     s3 = boto3.client('s3')
     presigned_post = s3.generate_presigned_post(
         Bucket = BUCKET,
@@ -147,7 +149,9 @@ def sign3():
         ],
         ExpiresIn = 3600
     )
-    
+    print('s33333333333333333333333333333333', s3)
+    print('requeeeeeeeeeeeeeeeeeeeeeeeeest', request)
+
     return json.dumps({
         'data': presigned_post,
         'url': 'https://%s.s3.amazonaws.com/%s' % (BUCKET, filename)
