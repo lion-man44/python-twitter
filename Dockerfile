@@ -7,9 +7,13 @@ WORKDIR /python
 RUN apt-get update -y && \
     apt-get install -y \
       python \
-      default-mysql-client
+      default-mysql-client \
+      python3-dev \
+      default-libmysqlclient-dev \
+      build-essential
 RUN pip install \
       flask \
-      flask-sqlalchemy
+      flask-sqlalchemy \
+      mysqlclient
 
 ADD ./ ./
