@@ -12,7 +12,4 @@ RUN pip install \
       flask \
       flask-sqlalchemy
 
-#RUN apt update && \
-#    apt install mysql-server -y
-
 ADD ./ ./

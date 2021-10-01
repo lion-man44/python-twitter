@@ -1,3 +1,4 @@
+import os
 from flask_sqlalchemy import SQLAlchemy
 
 class Database:
@@ -13,6 +14,6 @@ class Database:
         return klass._instance
 
     def __initialize(klass):
-        klass.app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root@localhost:3306/twitter_development'
+        klass.app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
         klass.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         klass.database = SQLAlchemy(klass.app)
