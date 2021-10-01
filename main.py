@@ -130,7 +130,7 @@ def profile_edit(user_id):
     })
     return redirect(url_for('profile'))
 
-@app.route('sign_s3/')
+@app.route('/sign_s3/')
 def sign3():
     BUCKET = os.environ.get('S3_BUCKET')
     filename = request.args.get('file_name')
