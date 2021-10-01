@@ -25,7 +25,7 @@
             {% set user_name = t['user_name'] %}
             {% set age = t['age'] %}
             {% set interests = t['interests'] %}
-            {% set image = url_for('static', filename = t['profile_image']) %}
+            {% set image = t['profile_image'] %}
             {% set pushed_user_id = t['pushed_user_id'] %}
             {% set following = t['following'] %}
             {% set is_current_user = login_user_id == tweet_user_id %}

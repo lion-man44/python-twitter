@@ -3,3 +3,4 @@ volumes/
 .secrets/
 static/
 !.static/150x150.png
+.DS_Store

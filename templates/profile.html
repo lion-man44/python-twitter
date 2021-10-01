@@ -9,7 +9,7 @@
 {% set email = session['email'] %}
 {% set user_info_id = session['user_info_id'] %}
 {% set interests = session['interests'] or '' %}
-{% set profile_image = url_for('static', filename = session['profile_image'] or '150x150.png') %}
+{% set profile_image = session['profile_image'] %}
 {% if user_info_id is none: %}
     {% set action = '/profile/new' %}
 {% else %}

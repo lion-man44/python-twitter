@@ -208,7 +208,7 @@ def __add_session(data):
     if 'interests' in data:
         session['interests'] = data['interests']
     if 'profile_image' in data:
-        session['profile_image'] = data['profile_image']
+        session['profile_image'] = os.environ['S3_BUCKET'] + data['profile_image']
     if 'age' in data:
         session['age'] = data['age']
 
