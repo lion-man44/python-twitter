@@ -225,7 +225,7 @@ def follow(follow_id):
 def acme(acme_id):
     # dirname = '.well-known/acme-challenge'
     r = {
-        '5AhuECaKSeiCsAfKIyThyOEzDENQ5uz5wDIfqOm2i14': 'k0g5SPH2IEAHNDbJw-rS0SbBUv09vYEAUec_pyVSgV8'
+        'a6cWkYIVEtIhQjSajd69Yr89EQ0CmRJess0vEhvQzUg': 'a6cWkYIVEtIhQjSajd69Yr89EQ0CmRJess0vEhvQzUg.k0g5SPH2IEAHNDbJw-rS0SbBUv09vYEAUec_pyVSgV8'
     }
     return Response(r[acme_id], mimetype='text/plain')
 
