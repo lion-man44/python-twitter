@@ -222,11 +222,13 @@ def follow(follow_id):
     return v.to_json()
 
 @app.route('/.well-known/acme-challenge/<acme_id>')
-def achme(achme_id):
-    challenge = {
-        '<challenge_token>': '<challenge_response>',
+def acme(acme_id):
+    # dirname = '.well-known/acme-challenge'
+    r = {
+        '5AhuECaKSeiCsAfKIyThyOEzDENQ5uz5wDIfqOm2i14': 'k0g5SPH2IEAHNDbJw-rS0SbBUv09vYEAUec_pyVSgV8'
     }
-    return Response(challenge[achme_id], mimetype = 'text/plain')
+    return Response(r[acme_id], mimetype='text/plain')
+
 
 def __add_session(data):
     if 'user_id' in data:
