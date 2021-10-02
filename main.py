@@ -5,8 +5,8 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify
 app = Flask(__name__)
 database = Database(app)
 
-import sqlalchemy
-import os, json, boto3
+import os, json, boto3, sqlalchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask.globals import session
 from flask.helpers import flash
 from werkzeug.utils import secure_filename
@@ -254,5 +254,6 @@ def __profile_image(file):
 if __name__ == '__main__':
     app.secret_key = 'test'
     app.config['SESSION_TYPE'] = 'filesystem'
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto = 1)
     port = int(os.environ.get('PORT', 5000))
     app.run(debug = True, host='0.0.0.0', port = port)
