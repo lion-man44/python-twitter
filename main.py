@@ -1,3 +1,4 @@
+from flask.wrappers import Response
 from werkzeug.wrappers import response
 from db import Database
 from flask import Flask, render_template, redirect, url_for, request, jsonify
@@ -220,6 +221,13 @@ def follow(follow_id):
         v = new.create()
     return v.to_json()
 
+@app.route('/.well-known/acme-challenge/<acme_id>')
+def achme(achme_id):
+    challenge = {
+        '<challenge_token>': '<challenge_response>',
+    }
+    return Response(challenge[achme_id], mimetype = 'text/plain')
+
 def __add_session(data):
     if 'user_id' in data:
         session['user_id'] = data['user_id']
@@ -254,6 +262,6 @@ def __profile_image(file):
 if __name__ == '__main__':
     app.secret_key = 'test'
     app.config['SESSION_TYPE'] = 'filesystem'
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto = 1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto = 'https')
     port = int(os.environ.get('PORT', 5000))
     app.run(debug = True, host='0.0.0.0', port = port)
