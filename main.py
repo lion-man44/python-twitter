@@ -262,6 +262,6 @@ def __profile_image(file):
 if __name__ == '__main__':
     app.secret_key = 'test'
     app.config['SESSION_TYPE'] = 'filesystem'
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto = 'https')
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto = 1)
     port = int(os.environ.get('PORT', 5000))
     app.run(debug = True, host='0.0.0.0', port = port)
